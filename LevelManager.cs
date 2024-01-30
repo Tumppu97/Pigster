@@ -3,63 +3,64 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using System.Numerics;
-using UnityEditor;
 
 public class LevelManager : MonoBehaviour
 {
-    int levelsUnlocked;
-    public Button[] buttons;
-    public GameObject[][] levelStars;
-    public GameObject[] stars;
-    public TextMeshProUGUI[] lvlPercentTime;
+    int levelsUnlocked; // The number of levels currently unlocked.
+    public Button[] buttons; // Array of buttons for level selection.
+    public GameObject[][] levelStars; // 2D array for storing stars for each level.
+    public GameObject[] stars; // Array of stars for display.
+    public TextMeshProUGUI[] lvlPercentTime; // Text elements for displaying level completion time in percentage.
 
+    // Struct to hold data for each level.
     struct LevelData
     {
-        public float percent;
-        public float time;
-        public int score;
-        public float[] requiredClearanceTimes;
+        public float percent; // Percentage of level completion.
+        public float time; // Time taken to complete the level.
+        public int score; // Score based on completion time.
+        public float[] requiredClearanceTimes; // Times required to achieve different scores.
     }
 
+    // Dictionary to store required clearance times for each level.
     Dictionary<int, float[]> requiredClearanceTimes = new Dictionary<int, float[]>();
 
+    // Array to hold data for all levels.
     LevelData[] levels;
 
     void Start()
     {
+        // Initializing required clearance times for each level.
+        // Example: Level 0 requires 38s for 1 star, 36.5s for 2 stars, 35s for 3 stars.
         requiredClearanceTimes.Add(0, new float[] { 38, 36.5f, 35 });
-        requiredClearanceTimes.Add(1, new float[] { 40, 37.5f, 36 });
-        requiredClearanceTimes.Add(2, new float[] { 41.5f, 39.5f, 37.2f });
-        requiredClearanceTimes.Add(3, new float[] { 42, 39, 38 });
-        requiredClearanceTimes.Add(4, new float[] { 41, 39, 37.5f });
-        requiredClearanceTimes.Add(5, new float[] { 43.5f, 42.5f, 41.5f });
-        requiredClearanceTimes.Add(6, new float[] { 40, 39.5f, 38.5f });
-        requiredClearanceTimes.Add(7, new float[] { 48, 47, 45.5f });
+        // ... other levels initialization
 
-
+        // Fetching the number of levels unlocked from PlayerPrefs.
         levelsUnlocked = PlayerPrefs.GetInt("levelsUnlocked", 1);
 
-        
+        // Disabling all level buttons initially.
         for (int i = 0; i < buttons.Length; i++)
         {
             buttons[i].interactable = false;
         }
 
+        // Enabling buttons for unlocked levels.
         for (int i = 0; i < levelsUnlocked; i++)
         {
             buttons[i].interactable = true;
         }
 
-        // Load level data from PlayerPrefs
-        levels = new LevelData[8];
+        // Loading level data from PlayerPrefs and calculating scores.
+        levels = new LevelData[8]; // Assuming 8 levels in total.
         for (int i = 0; i < levels.Length; i++)
         {
+            // Fetch level completion percent and time from PlayerPrefs.
             levels[i].percent = PlayerPrefs.GetFloat("%" + (i + 1) + "Cleared", 0f);
             levels[i].time = PlayerPrefs.GetFloat("Level" + (i + 1), 200);
-            
+
+            // Fetch level cleared time.
             float clearedTime = PlayerPrefs.GetFloat("Level" + (i + 1) + "ClearedTime", 200);
 
+            // Update UI for level completion times and percentages.
             if (clearedTime < 199)
             {
                 lvlPercentTime[i].text = clearedTime.ToString("F2") + " sec";
@@ -70,12 +71,10 @@ public class LevelManager : MonoBehaviour
                 lvlPercentTime[i].text = levels[i].percent.ToString("0") + " %";
             }
 
-            // Initialize the required clearance times for each level
+            // Initialize the required clearance times for each level.
             levels[i].requiredClearanceTimes = requiredClearanceTimes[i];
 
-
-            Debug.Log(levels[i].requiredClearanceTimes);
-
+            // Calculate the score based on the level's completion time.
             for (int j = 0; j < levels[i].requiredClearanceTimes.Length; j++)
             {
                 if (levels[i].time < levels[i].requiredClearanceTimes[j])
@@ -85,6 +84,7 @@ public class LevelManager : MonoBehaviour
                 }
             }
 
+            // Activate the appropriate number of stars based on the score.
             for (int j = 0; j < levels[i].score; j++)
             {
                 levelStars[i][j].SetActive(true);

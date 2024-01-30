@@ -6,72 +6,71 @@ using UnityEngine.InputSystem;
 
 public class PlayerMovement2 : MonoBehaviour
 {
+    [Header("Movement Settings")]
     [SerializeField] float jumpSpeed = 4.2f;
     [SerializeField] float umbrellaSpeed = 2f;
     [SerializeField] float rocketSpeed = 2f;
-    float freezeplayer = 0f;
-    public static float topSpeed;
-    int health = 1;
-    bool canDouble;
-    private int dashCounter;
-    public bool didJump;
-    public bool didJump2;
-    public bool didJump3;
-    public bool isAlive = true;
-    public ParticleSystem dust;
-    public ParticleSystem speedLines;
-    public ParticleSystem dashPS;
-    public static float deathCounter = 0f;
-    [SerializeField] StarManager starManager;
-
+    [SerializeField] float acceleration = 9f;
+    [SerializeField] float deceleration = 9f;
+    [SerializeField] float velPower = 1.2f;
     [SerializeField] private LayerMask jumpableGround;
+    [SerializeField] Animator animator;
     [SerializeField] GameObject followPoint;
     [SerializeField] TextMeshProUGUI deathCounterText;
     [SerializeField] TravelCalculator travelCalculator;
     [SerializeField] Camera2DFollow camera2DFollow;
-    public PlayerInput playerInput;
-    public InputAction touchPositionAction;
-    public InputAction touchPressAction;
+    [SerializeField] StarManager starManager;
 
+    public static float topSpeed;
+    public static float deathCounter = 0f;
+
+    private float freezePlayer = 0f;
     private float screenWidth;
     private float coyoteTime = 0.05f;
-    private float coyotoTimeCounter;
+    private float coyoteTimeCounter;
 
-    private float acceleration = 9f;
-    private float decceleration = 9f;
-    private float velPower = 1.2f;
-    //private bool didDouble;
-
-    [SerializeField] Animator animator;
-    public Animator crossFade;
-    public Animator counter;
-    public Rigidbody2D player;
-    public BoxCollider2D playercoll;
-    public CircleCollider2D playerCcoll;
-
-    public enum JumpState
-    {
-        GROUNDED, JUMPING, ROCKET_JUMPING, UMBRELLA_JUMPING, DASHING, DASHINGOUT
-    }
-
-    public JumpState jumpState;
-
-    // Betterfall stuff
+    // Better fall settings
     public float fallMultiplier;
     public float fallUmbrella;
     public float fallRocket;
     public float fallDash;
     private float fallTimer = 0.2f;
+
+    // Player state
+    private int health = 1;
+    private int dashCounter;
+    private bool canDoubleJump;
     private bool rocketSlow;
     private bool umbrellaSlow;
     private bool dashSlow;
     private bool isFallingAfterDash;
+    private bool isAlive = true;
     private RigidbodyConstraints2D originalConstraints;
 
-    //private float intensity = 0.1f;
+    // Input
+    public PlayerInput playerInput;
+    public InputAction touchPositionAction;
+    public InputAction touchPressAction;
 
+    // Player Components
+    public Animator crossFade;
+    public Animator counter;
+    public Rigidbody2D player;
+    public BoxCollider2D playerColl;
+    public CircleCollider2D playerCColl;
+    public ParticleSystem dust;
+    public ParticleSystem speedLines;
+    public ParticleSystem dashPS;
 
-    // Use this for initialization
+    // Jump States
+    public enum JumpState { GROUNDED, JUMPING, ROCKET_JUMPING, UMBRELLA_JUMPING, DASHING, DASHINGOUT }
+    public JumpState jumpState;
+
+    private bool didJump;
+    private bool didJump2;
+    private bool didJump3;
+
+    //Start the game
     void Start()
     {
         animator.Play("PigsterRun");
@@ -80,11 +79,13 @@ public class PlayerMovement2 : MonoBehaviour
         dashCounter = 0;
     }
 
+    //Display how many times the level has been attempted
     IEnumerator Displaycounter()
     {
         yield return new WaitForSeconds(0.5f);
         counter.Play("CounterPopin");
     }
+    //Cache screen size for better performance
     public void Awake()
     {
         originalConstraints = player.constraints;
@@ -98,6 +99,7 @@ public class PlayerMovement2 : MonoBehaviour
         }
     }
 
+    //Set booleans to true/false on inputs (Spaghetti)
     private void OnJump(InputValue value)
     {
         didJump = true;
@@ -109,12 +111,14 @@ public class PlayerMovement2 : MonoBehaviour
     private void OnJump3(InputValue value)
     {
         didJump3 = true;
-    }    
-    
+    }
+
 
     private void FixedUpdate()
     {
         //player.velocity = new Vector2(topSpeed, player.velocity.y);
+
+        //Calculate how much the player should be accelerating/deaccelerating depending on current jump
         float speedDif = topSpeed - player.velocity.x;
 
         float accelRate = (Mathf.Abs(topSpeed) > 0.01f) ? acceleration : decceleration;
@@ -123,7 +127,7 @@ public class PlayerMovement2 : MonoBehaviour
 
         player.AddForce(movement * Vector2.right);
 
-
+        //Handle all necessary changes to physics and animations on different states
         switch (jumpState)
         {
             case JumpState.GROUNDED:
@@ -187,12 +191,13 @@ public class PlayerMovement2 : MonoBehaviour
                 jumpState = JumpState.GROUNDED;
                 break;
         }
-
+        //Placehodler for future implementation
         if (player.velocity.y < 0)
         {
             //animator.SetTrigger("Fall");
         }
 
+        //if the player is alive and still play an idle animation
         if (player.velocity.x == 0f && player.velocity.y == 0f)
         {
             if (health == 1)
@@ -200,23 +205,27 @@ public class PlayerMovement2 : MonoBehaviour
                 animator.Play("PigsterIdle");
             }
         }
+        //Else set the next animation through trigger
         else
         {
             animator.SetTrigger("NotIdling");
         }
 
+        //If jumped and is grounded perform basic jump and enable the possibility to double jump
         if (didJump & coyotoTimeCounter > 0)
         {
             jumpState = JumpState.JUMPING;
             didJump = false;
             canDouble = true;
         }
+        //If jumped through the left side of the screen do same as before
         if (didJump2 & coyotoTimeCounter > 0)
         {
             jumpState = JumpState.JUMPING;
             didJump2 = false;
             canDouble = true;
         }
+        //If tapped left side of screen during jump play the UmbrellaJump and disable the ability to jump again
         if (didJump2 & canDouble & !IsGrounded())
         {
             jumpState = JumpState.UMBRELLA_JUMPING;
@@ -224,6 +233,7 @@ public class PlayerMovement2 : MonoBehaviour
             canDouble = false;
             didJump2 = false;
         }
+        //If tapped right side of the screen during jump play the RocketJump and disable the ability to jump again
         if (didJump & canDouble & !IsGrounded())
         {
             jumpState = JumpState.ROCKET_JUMPING;
@@ -231,6 +241,7 @@ public class PlayerMovement2 : MonoBehaviour
             canDouble = false;
             didJump = false;
         }
+        //If did Dash play the dash
         if (didJump3 & !IsGrounded() & dashCounter < 1)
         {
             jumpState = JumpState.DASHING;
@@ -255,7 +266,7 @@ public class PlayerMovement2 : MonoBehaviour
 
         #region adjust slow fall for umbrella+rocket
 
-        //checks if the pig is supposed to hover or not
+        //During Umbrella and RocketJump the player should fall down to the ground slower
         if (this.animator.GetCurrentAnimatorStateInfo(0).IsName("PigsterUmbrella") && !IsGrounded())
         {
             umbrellaSlow = true;
@@ -273,10 +284,10 @@ public class PlayerMovement2 : MonoBehaviour
         {
             rocketSlow = false;
         }
-        
 
-           
-        //slow fall if umbrella
+
+
+        //Set the fallspeed lower during UmbrellaJump and freeze it during Dash
         if (umbrellaSlow)
         {
             player.velocity += Vector2.up * Physics2D.gravity.y * (fallUmbrella - 1) * Time.deltaTime;
@@ -290,7 +301,7 @@ public class PlayerMovement2 : MonoBehaviour
             }
         }
 
-        //slow if rocket
+        //Set the fallspeed lower during RocketJump and freeze it during Dash
         if (rocketSlow)
         {
             player.velocity += Vector2.up * Physics2D.gravity.y * (fallRocket - 1) * Time.deltaTime;
@@ -304,18 +315,21 @@ public class PlayerMovement2 : MonoBehaviour
             }
         }
 
-        //slow if dash
+        //Freeze if dashing
         if (isFallingAfterDash)
         {
             player.velocity += Vector2.up * Physics2D.gravity.y * (fallDash - 1) * Time.deltaTime;
         }
         #endregion
+
+        //Check if the player is alive, Freeze him if he dies
         if (health <= 0)
         {
             topSpeed = 0f;
             //Setting player Alive to Dead to execute scripts only once
             if (isAlive)
             {
+                //Do all death related stuff and start the game again
                 player.constraints = RigidbodyConstraints2D.FreezeAll;
                 UnSubscribe();
                 Handheld.Vibrate();
@@ -327,8 +341,9 @@ public class PlayerMovement2 : MonoBehaviour
             animator.Play("PigsterDeath");
         }
     }
-        
+
     #region PlayerJumps
+    //Set the UmbrellaJump to slow the player down only after .3 seconds to make the effect align with the actual opening of the umbrella
     IEnumerator Umbrellajumptest()
     {
         yield return new WaitForSeconds(0.3f);
@@ -340,6 +355,7 @@ public class PlayerMovement2 : MonoBehaviour
         crossFade.Play("Crossfade_Start");
         StartCoroutine(StartGame());
     }
+
     private void JumpThePlayer()
     {
         player.velocity = new Vector2(player.velocity.x, freezeplayer);
@@ -368,11 +384,13 @@ public class PlayerMovement2 : MonoBehaviour
     //##################### CHECK IF THE PLAYER HIT SOMETHING ##################
     void OnTriggerEnter2D(Collider2D coll)
     {
+        //Hit an obstacle and died
         if (coll.gameObject.CompareTag("FallTrigger"))
         {
             health--;
             topSpeed = 0f;
         }
+        //Level Finished
         if (coll.gameObject.CompareTag("GoalTrigger"))
         {
             PassTheLevel();
@@ -394,23 +412,20 @@ public class PlayerMovement2 : MonoBehaviour
         }
     }
     //###################### CHECK IF PLAYER IS GOUNDED ###################
+
+    //Check grounding through raycast to make the gamefeel better
     private bool IsGrounded()
     {
         return Physics2D.BoxCast(playercoll.bounds.center, playercoll.bounds.size, 0f, Vector2.down, .1f, jumpableGround);
     }
 
 
-
+    //End dash after .25 seconds
     IEnumerator StopDashing()
     {
         yield return new WaitForSeconds(0.25F);
         jumpState = JumpState.DASHINGOUT;
     }
-
-
-
-
-
 
 
     IEnumerator StartGame()
@@ -467,3 +482,4 @@ public class PlayerMovement2 : MonoBehaviour
     }
     #endregion
 }
+
